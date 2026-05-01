@@ -8,13 +8,12 @@ function removePassword(userDoc) {
 
 export async function create(req, res) {
   try {
-    const { name, surname, email, birthDate, avatar, password } = req.body;
+    const { name, surname, email, birthDate, password } = req.body;
     const utente = new UtentiModel({
       name,
       surname,
       email,
       birthDate,
-      avatar,
       password,
     });
 
@@ -58,7 +57,7 @@ export async function getById(req, res) {
 export async function update(req, res) {
   try {
     const { id } = req.params;
-    const { name, surname, email, birthDate, avatar, password } = req.body;
+    const { name, surname, email, birthDate, password } = req.body;
 
     const utenteAggiornato = await UtentiModel.findByIdAndUpdate(
       id,
@@ -67,7 +66,6 @@ export async function update(req, res) {
         surname,
         email,
         birthDate,
-        avatar,
         password,
       },
       { new: true, runValidators: true }

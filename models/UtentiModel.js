@@ -9,7 +9,6 @@ const UtentiSchema = new mongoose.Schema({
     unique: true,
   },
   birthDate: String,
-  avatar: String,
   password: String,
 });
 

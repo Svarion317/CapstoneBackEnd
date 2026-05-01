@@ -1,6 +1,6 @@
 import express from "express";
+import authentication from "../middleware/authentication.js";
 import {
-  create,
   getAll,
   getById,
   update,
@@ -9,7 +9,7 @@ import {
 
 const utentiRouter = express.Router();
 
-utentiRouter.post("/", create);
+utentiRouter.use(authentication);
 utentiRouter.get("/", getAll);
 utentiRouter.get("/:id", getById);
 utentiRouter.put("/:id", update);

@@ -4,6 +4,7 @@ import cors from "cors";
 import geminiRoutes from "./routes/geminiRoutes.js";
 import utentiRoute from "./routes/utentiRoute.js";
 import authRoutes from "./routes/authRoutes.js";
+import savedQuestsRoute from "./routes/savedQuestsRoute.js";
 import { connect } from "./Db.js";
 
 const app = express();
@@ -14,6 +15,7 @@ app.use(express.json());
 app.use("/api/gemini", geminiRoutes);
 app.use("/api/utenti", utentiRoute);
 app.use("/api/auth", authRoutes);
+app.use("/api/saved-quests", savedQuestsRoute);
 
 app.get("/", (req, res) => {
   res.status(200).json({ message: "Server attivo" });

@@ -31,6 +31,21 @@ const normalizeBoolean = (value) => {
   return value === true || value === "true";
 };
 
+const hasText = (value) => {
+  return typeof value === "string" && value.trim().length > 0;
+};
+
+const hasCompleteNpc = (npc) => {
+  return (
+    npc &&
+    typeof npc === "object" &&
+    hasText(npc.name) &&
+    hasText(npc.role) &&
+    hasText(npc.personality) &&
+    hasText(npc.secret)
+  );
+};
+
 export const generateContent = async (req, res) => {
   try {
     const {
@@ -68,11 +83,33 @@ export const generateContent = async (req, res) => {
         : "not specified";
 
     const levelContext = getLevelContext(level);
+    const baseTopLevelFields = [
+      "title",
+      "hook",
+      "introduction",
+      "objective",
+      "locations",
+      "encounters",
+      "obstacle",
+      "reward",
+    ];
+    const allowedTopLevelFields = [
+      ...baseTopLevelFields,
+      ...(wantsNpc ? ["npc"] : []),
+      ...(wantsTwist ? ["twist"] : []),
+    ];
+    const allowedFieldList = allowedTopLevelFields
+      .map((field) => `"${field}"`)
+      .join(", ");
 
     const toggleRules = `
-TOGGLE RULES:
-- NPC generation: ${wantsNpc ? "ON — REQUIRED" : "OFF — FORBIDDEN"}
-- Narrative twist: ${wantsTwist ? "ON — REQUIRED" : "OFF — FORBIDDEN"}
+TOGGLE CONTRACT:
+- Treat toggle values as hard output constraints, not creative suggestions.
+- The final JSON must contain only these top-level keys: ${allowedFieldList}.
+- Do not add top-level keys outside that list.
+- Do not satisfy required fields with null, empty strings, placeholder text, or generic filler.
+- NPC generation: ${wantsNpc ? `ON - include exactly one top-level "npc" object and connect that NPC to the quest hook, one encounter, and the reward or obstacle.` : `OFF - omit the top-level "npc" key completely. Do not add a dedicated NPC section, "npcs" array, or named supporting-character dossier.`}
+- Narrative twist: ${wantsTwist ? `ON - include exactly one top-level "twist" string and seed it with clues in earlier quest sections.` : `OFF - omit the top-level "twist" key completely. Do not add a dedicated reveal, betrayal, hidden-truth, or plot-twist section.`}
 
 FIELD RULES:
 ${wantsNpc ? `- The "npc" field is REQUIRED and MUST appear in the final JSON.` : `- The "npc" field is FORBIDDEN and MUST NOT appear in the final JSON.`}
@@ -99,12 +136,14 @@ ${wantsTwist ? `- The "twist" field is REQUIRED and MUST appear in the final JSO
 - The NPC must not feel generic.
 - The NPC must have a clear function in the quest.
 - The "personality" field must include 2-3 roleplay traits or mannerisms.
-- The "secret" field must reveal something hidden that can affect player choices.`,
+- The "secret" field must reveal something hidden that can affect player choices.
+- The NPC must be woven into the quest, not appended as an isolated extra.`,
 
       wantsTwist &&
         `TWIST FIELD REQUIREMENTS:
 - The twist must be a late-quest revelation, not a random surprise.
-- It must recontextualize at least one earlier clue, NPC, location, or objective.
+- It must recontextualize at least one earlier clue, location, objective, or NPC if the NPC toggle is enabled.
+- Seed at least two fair clues before the reveal, using the hook, locations, encounters, obstacle, or NPC.
 - It must include practical DM guidance on when and how to reveal it.
 - It must create a meaningful choice, complication, or moral tension for the party.`,
     ]
@@ -128,6 +167,7 @@ CRITICAL OUTPUT RULES:
 - If a field is marked REQUIRED, it MUST appear.
 - If a field is marked FORBIDDEN, it MUST NOT appear.
 - The final JSON must match exactly the requested schema.
+- The final JSON must use exactly the allowed top-level keys for the current toggle state.
 
 WRITING RULES:
 - Write in third person as DM guidance.
@@ -141,6 +181,7 @@ WRITING RULES:
 - Mention party strengths, weaknesses, or synergies indirectly through encounter design.
 - Each encounter must include actionable advice for the DM.
 - Avoid generic fantasy filler.
+- Optional toggle content must affect the playable quest structure, not appear as detached flavor text.
 `.trim();
 
     const prompt = `
@@ -175,6 +216,7 @@ CONTENT REQUIREMENTS:
 - The obstacle must have motivation, tactics, and roleplay guidance.
 - The reward must include both mechanical and narrative consequences.
 - Gold, items, danger, and stakes must fit the party level.
+- Respect the toggle contract before all other style preferences.
 
 ${optionalFieldInstructions}
 
@@ -282,6 +324,13 @@ It must be specific enough that the DM could run the quest with minimal extra pr
 
     // Final backend enforcement.
     // Il prompt guida il modello, ma il backend decide cosa passa al frontend.
+    const allowedFields = new Set(allowedTopLevelFields);
+    Object.keys(parsed).forEach((key) => {
+      if (!allowedFields.has(key)) {
+        delete parsed[key];
+      }
+    });
+
     if (!wantsNpc) {
       delete parsed.npc;
     }
@@ -290,14 +339,14 @@ It must be specific enough that the DM could run the quest with minimal extra pr
       delete parsed.twist;
     }
 
-    if (wantsNpc && !parsed.npc) {
+    if (wantsNpc && !hasCompleteNpc(parsed.npc)) {
       return res.status(502).json({
         message: "AI response missing required npc field",
         raw: parsed,
       });
     }
 
-    if (wantsTwist && !parsed.twist) {
+    if (wantsTwist && !hasText(parsed.twist)) {
       return res.status(502).json({
         message: "AI response missing required twist field",
         raw: parsed,

@@ -6,6 +6,7 @@ import groqRoutes from "./routes/groqRoutes.js";
 import utentiRoute from "./routes/utentiRoute.js";
 import authRoutes from "./routes/authRoutes.js";
 import savedQuestsRoute from "./routes/savedQuestsRoute.js";
+import encounterRoutes from "./routes/encounterRoutes.js";
 import { connect } from "./Db.js";
 
 const app = express();
@@ -24,6 +25,7 @@ app.use("/api/groq", groqLimiter, groqRoutes);
 app.use("/api/utenti", utentiRoute);
 app.use("/api/auth", authRoutes);
 app.use("/api/saved-quests", savedQuestsRoute);
+app.use("/api/encounters", encounterRoutes);
 
 app.get("/", (req, res) => {
   res.status(200).json({ message: "Server attivo" });

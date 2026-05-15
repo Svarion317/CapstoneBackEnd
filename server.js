@@ -10,7 +10,7 @@ import encounterRoutes from "./routes/encounterRoutes.js";
 import { connect } from "./Db.js";
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const groqLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 20,
@@ -35,7 +35,7 @@ async function startServer() {
   try {
     await connect();
     app.listen(PORT, () => {
-      console.log(`Server in ascolto su http://localhost:${PORT}`);
+      console.log(`Server in ascolto sulla porta ${PORT}`);
     });
   } catch (err) {
     console.error("Impossibile avviare il server senza connessione al DB", err);
